@@ -23,7 +23,7 @@ This skill provides expert guidance for Django backend development with emphasis
 ## Installation
 
 ```bash
-npx skills add jorge-c/skills@django-general-expert
+npx skills add aztrock/skills@django-general-expert
 ```
 
 Or manually install by adding to your agent's skills directory.

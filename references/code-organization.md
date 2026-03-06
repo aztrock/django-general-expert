@@ -97,51 +97,63 @@ def update_post(request, pk):
         form = PostForm(instance=post)
         return render(request, 'post/edit.html', {'form': form})
 
-# ✅ GOOD: Early return pattern
-def update_post(request, pk):
-    post = get_object_or_404(Post, pk=pk)
+# ✅ GOOD: Class-Based View with early return
+from django.views.generic import UpdateView
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.shortcuts import get_object_or_404
+from django.http import HttpResponseForbidden
+
+
+class PostUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    model = Post
+    form_class = PostForm
+    template_name = 'post/edit.html'
     
-    if request.user != post.author:
-        return HttpResponseForbidden()
+    def test_func(self):
+        post = self.get_object()
+        return self.request.user == post.author
     
-    if request.method != 'POST':
-        form = PostForm(instance=post)
-        return render(request, 'post/edit.html', {'form': form})
+    def get_success_url(self):
+        return self.object.get_absolute_url()
     
-    form = PostForm(request.POST, instance=post)
-    if not form.is_valid():
-        return render(request, 'post/edit.html', {'form': form})
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        if self.object.is_published:
+            notify_subscribers(self.object)
+        return response
     
-    post = form.save()
-    if post.is_published:
-        notify_subscribers(post)
-    
-    return redirect('post_detail', pk=post.pk)
+    def handle_no_permission(self):
+        return HttpResponseForbidden("You can only edit your own posts")
 ```
 
 ### Early Return in DRF Views
 
 ```python
-# ✅ GOOD: Early return in DRF
+# ✅ GOOD: Early return in DRF with raise ValidationError
+# Note: With drf-standardized-errors, ValidationError is automatically converted to proper HTTP responses
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
+
+
 class OrderViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
+    # Permissions should be configured globally in settings.py
+    # Only add specific permissions here when needed
     
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):
         order = self.get_object()
         
+        # Check ownership
         if order.user != request.user:
-            return Response(
-                {'error': 'Not your order'}, 
-                status=status.HTTP_403_FORBIDDEN
-            )
+            raise ValidationError({'detail': 'Not your order'})
         
+        # Check status
         if order.status not in ['pending', 'paid']:
-            return Response(
-                {'error': 'Cannot cancel this order'}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            raise ValidationError({'detail': 'Cannot cancel this order'})
         
+        # Business logic
         order.status = 'cancelled'
         order.save()
         
@@ -149,6 +161,21 @@ class OrderViewSet(viewsets.ModelViewSet):
         notify_merchant(order)
         
         return Response({'status': 'cancelled'}, status=status.HTTP_200_OK)
+```
+
+### Global Permissions Configuration
+
+```python
+# settings.py
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}
+
+# Django settings.py
+LOGIN_URL = '/accounts/login/'
+LOGIN_REDIRECT_URL = '/dashboard/'
 ```
 
 ### Early Return in Serializers
@@ -251,14 +278,27 @@ class Order(models.Model):
 
 
 # Clear state checks
+# ❌ BAD: Using get() can raise DoesNotExist
 order = Order.objects.get(pk=1)
 if order.can_ship:
     prepare_shipment(order)
 
+# ✅ GOOD: Using filter().first() avoids unnecessary exceptions
+order = Order.objects.filter(pk=1).first()
+if not order:
+    raise ValidationError('Order not found')
+    
+if order.can_ship:
+    prepare_shipment(order)
+
 # State transitions are explicit
-def ship_order(order):
+def ship_order(order_id):
+    order = Order.objects.filter(pk=order_id).first()
+    if not order:
+        raise ValidationError('Order not found')
+    
     if order.status != OrderStatus.PAID:
-        raise ValueError("Only paid orders can be shipped")
+        raise ValidationError("Only paid orders can be shipped")
     
     order.status = OrderStatus.SHIPPED
     order.shipped_at = timezone.now()
@@ -294,7 +334,16 @@ class Order(models.Model):
 
 
 # Usage
+# ❌ BAD: Using get() can raise DoesNotExist
 order = Order.objects.get(pk=1)
+if order.can_transition_to(OrderStatus.SHIPPED):
+    order.transition_to(OrderStatus.SHIPPED)
+
+# ✅ GOOD: Using filter().first() avoids unnecessary exceptions
+order = Order.objects.filter(pk=1).first()
+if not order:
+    raise ValidationError('Order not found')
+    
 if order.can_transition_to(OrderStatus.SHIPPED):
     order.transition_to(OrderStatus.SHIPPED)
 ```
@@ -612,8 +661,8 @@ class OrderServiceTest(TestCase):
         totals = OrderService.calculate_totals(self.cart)
         
         self.assertEqual(totals['subtotal'], 200)
-        self.assertEqual(totals['tax'], 42)  # 21%
-        self.assertEqual(totals['shipping'], 0)  # Free over 100
+        self.assertEqual(totals['tax'], 42)
+        self.assertEqual(totals['shipping'], 0)
         self.assertEqual(totals['total'], 242)
     
     def test_create_order(self):
@@ -711,6 +760,8 @@ product.can_be_purchased
 
 ### Feature-Based Structure
 
+For small projects, a flat structure works fine. For medium to large projects, separate into modules:
+
 ```
 myproject/
 ├── manage.py
@@ -727,32 +778,36 @@ myproject/
 │   ├── users/
 │   │   ├── __init__.py
 │   │   ├── models.py
-│   │   ├── managers.py
-│   │   ├── serializers.py
-│   │   ├── views.py
-│   │   ├── urls.py
-│   │   ├── services.py
 │   │   ├── constants.py
-│   │   ├── permissions.py
-│   │   └── tests/
-│   │       ├── __init__.py
-│   │       ├── test_models.py
-│   │       ├── test_views.py
-│   │       └── test_services.py
+│   │   ├── managers.py        # Custom managers
+│   │   ├── services.py        # Business logic
+│   │   ├── views/
+│   │   │   ├── __init__.py
+│   │   │   ├── orders.py      # Class-based views
+│   │   │   └── payments.py
+│   │   ├── forms/
+│   │   │   ├── __init__.py
+│   │   │   └── orders.py
+│   │   ├── integrations/     # External service integrations
+│   │   │   ├── __init__.py
+│   │   │   ├── sms.py         # SMS providers
+│   │   │   ├── email.py       # Email providers
+│   │   │   └── payments.py    # Payment gateways
+│   │   ├── tests/
+│   │   └── migrations/
 │   ├── orders/
-│   │   ├── __init__.py
 │   │   ├── models.py
-│   │   ├── services.py
 │   │   ├── constants.py
-│   │   ├── views.py
+│   │   ├── services.py
+│   │   ├── views/
+│   │   ├── forms/
+│   │   ├── selectors.py      # Complex query methods
 │   │   └── tests/
 │   └── products/
-│       ├── __init__.py
-│       ├── models.py
 │       └── ...
 ├── core/
 │   ├── __init__.py
-│   ├── constants.py      # Shared constants
+│   ├── constants.py
 │   ├── mixins.py
 │   ├── utils.py
 │   └── validators.py
@@ -762,48 +817,115 @@ myproject/
     └── production.txt
 ```
 
+### DRF Project Structure with Versioning
+
+For DRF APIs in medium/large projects, organize by version:
+
+```
+apps/
+├── orders/
+│   ├── __init__.py
+│   ├── models.py
+│   ├── constants.py
+│   ├── api/
+│   │   ├── __init__.py
+│   │   └── v1/
+│   │       ├── __init__.py
+│   │       ├── urls.py
+│   │       ├── serializers.py
+│   │       ├── viewsets.py
+│   │       └── permissions.py  # Specific permissions only
+│   └── services.py
+├── products/
+│   └── api/
+│       └── v1/
+│           ├── urls.py
+│           ├── serializers.py
+│           └── viewsets.py
+```
+
 ### Module Responsibilities
 
+Each module has a specific purpose:
+
+| Module | Responsibility |
+|--------|---------------|
+| `constants.py` | Status enums, TextChoices, configuration values |
+| `models.py` | Data models, field definitions, simple properties |
+| `managers.py` | Custom QuerySets and Managers |
+| `services.py` | Business logic, complex operations, transactions |
+| `views/` or `viewsets.py` | HTTP handling, connect to services/forms |
+| `forms/` | Form validation for template views |
+| `serializers.py` | Serialization/deserialization for DRF |
+| `selectors.py` | Complex query composition |
+| `integrations/` | External service integrations (SMS, email, payments) |
+
+### External Integrations
+
+Create separate modules for third-party integrations. Use abstract base classes for multiple providers:
+
 ```python
-# constants.py - Status, enums, configuration values
-# - TextChoices for status fields
-# - Numeric constants
-# - String constants
+# integrations/sms.py
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
 
-# models.py - Data models and database schema
-# - Model definitions
-# - Field definitions
-# - Meta options
-# - Simple model methods and properties
 
-# managers.py - Custom QuerySets and Managers
-# - QuerySet methods
-# - Manager methods
-# - Database queries
+@dataclass
+class SMSResult:
+    success: bool
+    message_id: str = ''
+    error: str = ''
 
-# services.py - Business logic
-# - Complex operations
-# - External integrations
-# - Validation logic
-# - Orchestration
 
-# views.py - HTTP handling
-# - Request/response handling
-# - Authentication/authorization
-# - View logic (thin, delegates to services)
+class BaseSMSProvider(ABC):
+    """Abstract base class for SMS providers."""
+    
+    @abstractmethod
+    def send(self, to: str, message: str) -> SMSResult:
+        pass
 
-# serializers.py - DRF serializers
-# - Serialization/deserialization
-# - Validation
-# - Field transformations
 
-# permissions.py - DRF permissions
-# - Permission classes
-# - Authorization logic
+class TwilioSMSProvider(BaseSMSProvider):
+    def __init__(self, account_sid: str, auth_token: str):
+        self.client = TwilioClient(account_sid, auth_token)
+    
+    def send(self, to: str, message: str) -> SMSResult:
+        try:
+            result = self.client.messages.create(
+                body=message,
+                from_=self.from_number,
+                to=to
+            )
+            return SMSResult(success=True, message_id=result.sid)
+        except Exception as e:
+            return SMSResult(success=False, error=str(e))
 
-# urls.py - URL routing
-# - URL patterns
-# - Route configuration
+
+class AWS SNSProvider(BaseSMSProvider):
+    def __init__(self, region: str, access_key: str, secret_key: str):
+        self.client = boto3.client('sns', region_name=region)
+    
+    def send(self, to: str, message: str) -> SMSResult:
+        try:
+            result = self.client.publish(
+                PhoneNumber=to,
+                Message=message
+            )
+            return SMSResult(success=True, message_id=result['MessageId'])
+        except Exception as e:
+            return SMSResult(success=False, error=str(e))
+
+
+# Usage in services
+class NotificationService:
+    def __init__(self, sms_provider: BaseSMSProvider):
+        self.sms_provider = sms_provider
+    
+    def send_sms(self, to: str, message: str):
+        result = self.sms_provider.send(to, message)
+        if not result.success:
+            logger.error(f'SMS failed: {result.error}')
+        return result
 ```
 
 ## Imports

@@ -46,6 +46,15 @@ class Order(models.Model):
     
     def can_cancel(self):
         return self.status in [OrderStatus.PENDING, OrderStatus.PAID]
+
+
+# Using OrderStatus constants for comparison
+if order.status == OrderStatus.PENDING:
+    pass
+
+# In queries - use the constant, not the string
+pending_orders = Order.objects.filter(status=OrderStatus.PENDING)
+paid_orders = Order.objects.filter(status=OrderStatus.PAID)
 ```
 
 ### Always Add related_name
@@ -120,9 +129,10 @@ class Order(models.Model):
 ```python
 import uuid
 
+
 class Order(models.Model):
-    # Internal use (auto-increment, fast for joins)
-    id = models.BigAutoField(primary_key=True)
+    # Django automatically creates auto-increment id for internal use
+    # Internal use: order.id (fast for database joins)
     
     # Public use (UUID prevents enumeration attacks)
     public_id = models.UUIDField(
@@ -363,9 +373,15 @@ authors = Author.objects.prefetch_related(
 
 ## Custom Managers
 
-Encapsulate common queries in managers.
+Encapsulate common queries in managers. Always put imports at module level.
 
 ```python
+# imports at module level - NEVER inside methods
+from django.db.models import Sum
+from django.utils import timezone
+from datetime import timedelta
+
+
 class OrderManager(models.Manager):
     def get_queryset(self):
         return super().get_queryset().select_related('customer')
@@ -377,8 +393,6 @@ class OrderManager(models.Manager):
         return self.filter(status=OrderStatus.PAID)
     
     def recent(self, days=30):
-        from django.utils import timezone
-        from datetime import timedelta
         cutoff = timezone.now() - timedelta(days=days)
         return self.filter(created_at__gte=cutoff)
     
@@ -386,7 +400,6 @@ class OrderManager(models.Manager):
         return self.filter(customer=customer)
     
     def with_totals(self):
-        from django.db.models import Sum
         return self.annotate(
             items_total=Sum('items__price')
         )
@@ -523,50 +536,9 @@ Product.objects.filter(pk=1, stock__gt=0).update(stock=F('stock') - 1)
 books = Book.objects.filter(price__lt=F('author__avg_book_price'))
 ```
 
-## Migrations Best Practices
+## Data Migrations
 
-### Create Migrations Properly
-
-```bash
-# After model changes
-python manage.py makemigrations
-
-# With descriptive name
-python manage.py makemigrations --name add_user_email_index
-
-# Preview SQL
-python manage.py sqlmigrate myapp 0001
-
-# Check for issues
-python manage.py check
-```
-
-### Migration Files
-
-```python
-# Generated migration
-from django.db import migrations, models
-
-
-class Migration(migrations.Migration):
-    dependencies = [
-        ('myapp', '0001_initial'),
-    ]
-    
-    operations = [
-        migrations.AddField(
-            model_name='user',
-            name='email',
-            field=models.EmailField(max_length=254, unique=True),
-        ),
-        migrations.AddIndex(
-            model_name='user',
-            index=models.Index(fields=['email'], name='user_email_idx'),
-        ),
-    ]
-```
-
-### Data Migrations
+Use data migrations to populate or transform data.
 
 ```python
 # migrations/0002_populate_user_emails.py
@@ -590,7 +562,9 @@ class Migration(migrations.Migration):
     ]
 ```
 
-### Reversible Migrations
+## Reversible Migrations
+
+Always make data migrations reversible.
 
 ```python
 def add_email_forward(apps, schema_editor):
@@ -619,11 +593,6 @@ class Migration(migrations.Migration):
         migrations.RunPython(add_email_forward, add_email_reverse),
     ]
 ```
-
-### Never Edit Applied Migrations
-
-```python
-# ❌ BAD: Editing applied migration
 # This will cause inconsistencies between environments
 
 # ✅ GOOD: Create new migration

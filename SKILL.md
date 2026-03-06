@@ -74,7 +74,7 @@ Identify the task category, then **use the Read tool** to load the corresponding
 |-----------|--------|
 | Clean code, organization, early return | Read `references/code-organization.md` |
 | Code quality standards | Read `references/code-quality.md` |
-| Models, ORM, migrations | Read `references/models-and-orm.md` |
+| Models, ORM | Read `references/models-and-orm.md` |
 | Views, URLs | Read `references/views-and-urls.md` |
 | DRF (serializers, viewsets, errors) | Read `references/drf-guidelines.md` |
 | Filters (django-filters) | Read `references/filters.md` |
@@ -86,6 +86,16 @@ Identify the task category, then **use the Read tool** to load the corresponding
 | Celery tasks | Read `references/celery-patterns.md` |
 | Django signals | Read `references/signals-guide.md` |
 | Complete examples | Read `references/examples.md` |
+| Django Admin | Read `references/admin-guide.md` |
+| Forms & ModelForms | Read `references/forms-modelforms.md` |
+| Authentication | Read `references/authentication.md` |
+| Middleware | Read `references/middleware.md` |
+| Database migrations | Read `references/migrations.md` |
+| Logging | Read `references/logging.md` |
+| Static & media files | Read `references/static-media-files.md` |
+| Project structure | Read `references/project-structure.md` |
+| Third-party packages | Read `references/third-party-packages.md` |
+| Docker & deployment | Read `references/docker-deployment.md` |
 
 For multi-category requests, read all relevant references.
 
@@ -951,21 +961,21 @@ DEFAULT_TIMEOUT = 30
 > **IMPORTANT**: Use the Read tool to load these files when needed.
 > Example: `Read references/code-organization.md`
 
-- **`code-organization.md`** (~8k words)
+- **`code-organization.md`** (973 lines)
   - Early return pattern
   - Bool trap avoidance
   - Naming conventions
   - File organization
   - Import patterns
 
-- **`code-quality.md`** (~10k words)
+- **`code-quality.md`** (554 lines)
   - Boy Scout Rule, DRY, KISS, YAGNI, SOLID
   - Function length guidelines
   - Magic numbers avoidance
   - Dead code removal
   - Documentation guidelines
 
-- **`models-and-orm.md`** (~18k words)
+- **`models-and-orm.md`** (685 lines)
   - Model design patterns
   - UUID vs id for security
   - Relationships (FK, M2M, O2O)
@@ -974,14 +984,14 @@ DEFAULT_TIMEOUT = 30
   - N+1 query prevention
   - Database indexes
 
-- **`views-and-urls.md`** (~17k words)
+- **`views-and-urls.md`** (599 lines)
   - FBV vs CBV decision guide
   - Service layer integration
   - URL patterns
   - Middleware
   - Error handling
 
-- **`drf-guidelines.md`** (~22k words)
+- **`drf-guidelines.md`** (383 lines)
   - Serializer patterns
   - Viewsets vs APIViews
   - Permissions (in settings)
@@ -989,14 +999,117 @@ DEFAULT_TIMEOUT = 30
   - drf-standardized-errors
   - API versioning
 
-- **`filters.md`** (~8k words)
+- **`filters.md`** (528 lines)
   - django-filters integration
   - Custom FilterSets
   - Filter organization
   - Performance
 
-- **`testing-strategies.md`** (~24k words)
+- **`testing-strategies.md`** (639 lines)
   - TestCase patterns
+  - APITestCase for DRF
+  - FactoryBoy for test data
+  - Mocking external services
+  - Test organization
+
+- **`security-checklist.md`** (640 lines)
+  - OWASP Top 10
+  - Authentication
+  - Authorization
+  - Input validation
+  - HTTPS/SSL
+
+- **`performance-optimization.md`** (698 lines)
+  - Query optimization
+  - Caching (Redis)
+  - Database indexing
+  - Profiling
+  - Bulk operations
+
+- **`advanced-patterns.md`** (480 lines)
+  - Service layer (fuera del flujo básico de DRF/Django)
+  - QuerySets y Managers
+  - Fat Model Problem
+  - Fat View Problem
+  - Flujo correcto DRF y Django
+
+- **`constants.md`** (463 lines)
+  - Why separate constants
+  - TextChoices organization
+  - Avoiding circular imports
+  - Examples
+
+- **`celery-patterns.md`** (649 lines)
+  - Task definition
+  - Validation before creation
+  - State verification
+  - Error handling
+  - Retry patterns
+
+- **`signals-guide.md`** (554 lines)
+  - When to use signals
+  - When to avoid signals
+  - Debugging difficulties
+  - Examples
+
+- **`examples.md`** (1034 lines)
+  - Blog with DRF
+  - Order processing
+  - User registration
+  - Testing suite
+
+- **`admin-guide.md`** (290 lines)
+  - Django Admin customization
+  - List display options
+  - Inline models
+  - Custom admin views
+
+- **`forms-modelforms.md`** (403 lines)
+  - Form validation
+  - ModelForm patterns
+  - Form handling in views
+  - Widget customization
+
+- **`authentication.md`** (393 lines)
+  - Custom user model
+  - Login/logout
+  - JWT authentication
+  - Permission classes
+
+- **`middleware.md`** (256 lines)
+  - Custom middleware
+  - Request/response processing
+  - Authentication middleware
+
+- **`migrations.md`** (287 lines)
+  - Creating migrations
+  - Data migrations
+  - Best practices
+  - Troubleshooting
+
+- **`logging.md`** (290 lines)
+  - Logging configuration
+  - Logging in services
+  - Celery task logging
+
+- **`static-media-files.md`** (254 lines)
+  - Static files configuration
+  - Media file handling
+  - Image processing
+
+- **`project-structure.md`** (260 lines)
+  - Project organization
+  - Settings structure
+  - Application patterns
+
+- **`third-party-packages.md`** (197 lines)
+  - Recommended packages
+  - Package selection criteria
+
+- **`docker-deployment.md`** (280 lines)
+  - Docker configuration
+  - Nginx setup
+  - Production checklist
   - APITestCase for DRF
   - FactoryBoy for test data
   - Mocking external services

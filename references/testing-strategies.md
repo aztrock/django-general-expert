@@ -14,12 +14,31 @@ myapp/
 ├── services.py
 └── tests/
     ├── __init__.py
-    ├── test_models.py
-    ├── test_views.py
-    ├── test_serializers.py
-    ├── test_services.py
-    └── factories.py
+    ├── factories/
+    │   ├── __init__.py
+    │   ├── factory_user.py
+    │   ├── factory_post.py
+    │   └── factory_order.py
+    ├── models/
+    │   ├── __init__.py
+    │   ├── test_user.py
+    │   ├── test_post.py
+    │   └── test_order.py
+    ├── views/
+    │   ├── __init__.py
+    │   ├── test_post_list.py
+    │   └── test_post_detail.py
+    ├── serializers/
+    │   ├── __init__.py
+    │   ├── test_post_serializer.py
+    │   └── test_user_serializer.py
+    └── services/
+        ├── __init__.py
+        ├── test_order_service.py
+        └── test_payment_service.py
 ```
+
+Use modular structure when tests grow large. Each file tests one model/view/serializer/service.
 
 ### Running Tests
 
