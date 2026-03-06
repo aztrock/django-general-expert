@@ -44,41 +44,46 @@ AUTH_USER_MODEL = 'accounts.User'
 ```python
 # views.py
 from django.contrib.auth import authenticate, login, logout
-from django.shortcuts import render, redirect
+from django.views.generic import FormView, View, RedirectView
+from django.shortcuts import redirect
 from django.contrib import messages
 
 
-def user_login(request):
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
+class LoginView(FormView):
+    template_name = 'accounts/login.html'
+    form_class = None  # Use Django's AuthenticationForm if needed
+    success_url = 'dashboard'
+
+    def form_valid(self, form):
+        username = self.request.POST.get('username')
+        password = self.request.POST.get('password')
         
-        user = authenticate(request, username=username, password=password)
+        user = authenticate(self.request, username=username, password=password)
         
         if user is not None:
-            login(request, user)
-            
-            # Redirect to next page
-            next_page = request.GET.get('next', 'dashboard')
+            login(self.request, user)
+            next_page = self.request.GET.get('next', self.success_url)
             return redirect(next_page)
         else:
-            messages.error(request, 'Invalid username or password')
+            messages.error(self.request, 'Invalid username or password')
+            return self.form_invalid(form)
+
+
+class LogoutView(RedirectView):
+    url = 'login'
     
-    return render(request, 'accounts/login.html')
-
-
-def user_logout(request):
-    logout(request)
-    return redirect('login')
+    def get_redirect_url(self, *args, **kwargs):
+        logout(self.request)
+        return super().get_redirect_url(*args, **kwargs)
 
 
 # urls.py
 from django.urls import path
-from . import views
+from .views import LoginView, LogoutView
 
 urlpatterns = [
-    path('login/', views.user_login, name='login'),
-    path('logout/', views.user_logout, name='logout'),
+    path('login/', LoginView.as_view(), name='login'),
+    path('logout/', LogoutView.as_view(), name='logout'),
 ]
 ```
 
@@ -113,25 +118,35 @@ class UserRegistrationForm(UserCreationForm):
         
         if commit:
             user.save()
-            # Send verification email
             send_verification_email(user)
         
         return user
 
 
 # views.py
-def register(request):
-    if request.method == 'POST':
-        form = UserRegistrationForm(request.POST)
-        
-        if form.is_valid():
-            user = form.save()
-            login(request, user)
-            return redirect('dashboard')
-    else:
-        form = UserRegistrationForm()
-    
-    return render(request, 'accounts/register.html', {'form': form})
+from django.views.generic import FormView
+from django.contrib.auth import login
+from django.shortcuts import redirect
+
+
+class RegisterView(FormView):
+    template_name = 'accounts/register.html'
+    form_class = UserRegistrationForm
+    success_url = 'dashboard'
+
+    def form_valid(self, form):
+        user = form.save()
+        login(self.request, user)
+        return redirect(self.success_url)
+
+
+# urls.py
+from django.urls import path
+from .views import RegisterView
+
+urlpatterns = [
+    path('register/', RegisterView.as_view(), name='register'),
+]
 ```
 
 ## Password Management
@@ -175,22 +190,35 @@ from django.contrib.auth import views as auth_views
 
 urlpatterns = [
     path('password_change/', 
-         auth_views.PasswordChangeView.as_view(), 
+         auth_views.PasswordChangeView.as_view(
+             template_name='accounts/password_change.html'
+         ), 
          name='password_change'),
     path('password_change/done/', 
-         auth_views.PasswordChangeDoneView.as_view(), 
+         auth_views.PasswordChangeDoneView.as_view(
+             template_name='accounts/password_change_done.html'
+         ), 
          name='password_change_done'),
     path('password_reset/', 
-         auth_views.PasswordResetView.as_view(), 
+         auth_views.PasswordResetView.as_view(
+             template_name='accounts/password_reset.html',
+             email_template_name='accounts/password_reset_email.html',
+         ), 
          name='password_reset'),
     path('password_reset/done/', 
-         auth_views.PasswordResetDoneView.as_view(), 
+         auth_views.PasswordResetDoneView.as_view(
+             template_name='accounts/password_reset_done.html'
+         ), 
          name='password_reset_done'),
     path('reset/<uidb64>/<token>/', 
-         auth_views.PasswordResetConfirmView.as_view(), 
+         auth_views.PasswordResetConfirmView.as_view(
+             template_name='accounts/password_reset_confirm.html'
+         ), 
          name='password_reset_confirm'),
     path('reset/done/', 
-         auth_views.PasswordResetCompleteView.as_view(), 
+         auth_views.PasswordResetCompleteView.as_view(
+             template_name='accounts/password_reset_complete.html'
+         ), 
          name='password_reset_complete'),
 ]
 ```
@@ -207,6 +235,21 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ],
 }
+
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+}
+
+# For custom user model with UUID primary key:
+# SIMPLE_JWT = {
+#     'USER_ID_FIELD': 'public_id',
+#     'USER_ID_CLAIM': 'user_id',
+# }
 
 # Install: pip install djangorestframework-simplejwt
 
@@ -238,13 +281,33 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         # Add custom claims
         token['email'] = user.email
         token['is_verified'] = user.is_verified
-        token['role'] = user.role
         
         return token
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+```
+
+
+### Sliding Tokens vs Regular JWT
+
+**Regular JWT (default):**
+- Short access token, separate refresh token
+- Better security (stateless)
+- Requires refresh before expiration
+
+**Sliding Tokens:**
+- Single token that refreshes on each use
+- Better user experience (session-like)
+- Use when: user experience priority over maximum security
+
+```python
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'SLIDING_TOKEN_LIFETIME': timedelta(days=1),
+    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
+}
 ```
 
 ## Permission Classes
@@ -349,6 +412,87 @@ SOCIALACCOUNT_PROVIDERS = {
 
 LOGIN_REDIRECT_URL = 'dashboard'
 ACCOUNT_LOGOUT_REDIRECT_URL = 'home'
+```
+
+
+## Brute Force Protection (django-axes)
+
+```python
+# settings.py
+# pip install django-axes
+from datetime import timedelta
+
+INSTALLED_APPS = [
+    'axes',
+]
+
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_TIME = timedelta(minutes=15)
+
+# Handler options:
+# 'axes.handlers.database.AxesDatabaseHandler' - Store in DB
+# 'axes.handlers.cache.AxesCacheHandler' - Store in cache (Redis)
+# 'axes.handlers.redis.AxesRedisHandler' - Store in Redis
+AXES_HANDLER = 'axes.handlers.database.AxesDatabaseHandler'
+
+# urls.py
+from django.urls import path
+
+urlpatterns = [
+    path('admin/axes/', include('axes.urls')),
+]
+```
+
+
+## dj-rest-auth (DRF Authentication Endpoints)
+
+```python
+# settings.py
+# pip install dj-rest-auth
+
+INSTALLED_APPS = [
+    'rest_framework',
+    'rest_framework.authtoken',
+    'dj_rest_auth',
+]
+
+REST_AUTH = {
+    'USER_SERIALIZERS': {
+        'USER': 'myapp.serializers.UserSerializer',
+    },
+    'LOGIN_SERIALIZERS': {
+        'LOGIN': 'myapp.serializers.LoginSerializer',
+    },
+    'PASSWORD_RESET_SERIALIZERS': {
+        'PASSWORD_RESET': 'myapp.serializers.PasswordResetSerializer',
+    },
+}
+
+
+# urls.py
+from django.urls import path
+from dj_rest_auth.views import (
+    LoginView,
+    LogoutView,
+    UserDetailsView,
+    PasswordChangeView,
+    PasswordResetView,
+    PasswordResetConfirmView,
+)
+
+urlpatterns = [
+    path('api/auth/login/', LoginView.as_view(), name='rest_login'),
+    path('api/auth/logout/', LogoutView.as_view(), name='rest_logout'),
+    path('api/auth/user/', UserDetailsView.as_view(), name='rest_user_details'),
+    path('api/auth/password/change/', PasswordChangeView.as_view(), name='rest_password_change'),
+    path('api/auth/password/reset/', PasswordResetView.as_view(), name='rest_password_reset'),
+    path('api/auth/password/reset/confirm/', PasswordResetConfirmView.as_view(), name='rest_password_reset_confirm'),
+]
 ```
 
 ## Session Management

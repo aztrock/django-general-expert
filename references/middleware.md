@@ -31,32 +31,25 @@ MIDDLEWARE = [
 
 ```python
 # middleware.py
+import logging
 from django.utils.deprecation import MiddlewareMixin
+
+logger = logging.getLogger(__name__)
 
 
 class RequestLoggingMiddleware(MiddlewareMixin):
     def process_request(self, request):
-        # Log request
-        print(f'{request.method} {request.path}')
+        logger.info(f'{request.method} {request.path}')
     
     def process_response(self, request, response):
-        # Log response
-        print(f'Response: {response.status_code}')
+        logger.info(f'Response: {response.status_code}')
         return response
 
 
-# With error handling
 class ErrorLoggingMiddleware(MiddlewareMixin):
     def process_exception(self, request, exception):
-        # Log exception
         logger.exception(f'Error processing {request.path}: {exception}')
-        return None  # Let Django handle it
-
-
-# Using async (Django 3.1+)
-import logging
-
-logger = logging.getLogger(__name__)
+        return None
 
 
 class AsyncRequestLoggingMiddleware:
@@ -77,14 +70,18 @@ class AsyncRequestLoggingMiddleware:
 
 ```python
 # middleware.py
+import logging
 from django.contrib.auth import get_user_model
+from django.shortcuts import redirect
 from django.utils.deprecation import MiddlewareMixin
+from django.utils import timezone
+
+logger = logging.getLogger(__name__)
 
 
 class UserLastActiveMiddleware(MiddlewareMixin):
     def process_request(self, request):
         if request.user.is_authenticated:
-            # Update last active
             User = get_user_model()
             User.objects.filter(pk=request.user.pk).update(
                 last_active_at=timezone.now()
@@ -104,7 +101,6 @@ class ForcePasswordChangeMiddleware(MiddlewareMixin):
         if request.user.force_password_change:
             if request.path not in self.EXEMPT_URLS:
                 if not request.path.startswith('/accounts/password_change/'):
-                    from django.shortcuts import redirect
                     return redirect('password_change')
         
         return None
@@ -114,9 +110,10 @@ class ForcePasswordChangeMiddleware(MiddlewareMixin):
 
 ```python
 # middleware.py
-from django.http import JsonResponse
-from django.core.exceptions import ValidationError
 import json
+from django.core.cache import cache
+from django.http import JsonResponse
+from django.utils.deprecation import MiddlewareMixin
 
 
 class JSONBodyValidationMiddleware(MiddlewareMixin):
@@ -136,15 +133,12 @@ class JSONBodyValidationMiddleware(MiddlewareMixin):
 
 class RateLimitMiddleware(MiddlewareMixin):
     def process_request(self, request):
-        # Simple rate limiting
-        from django.core.cache import cache
-        
         ip = request.META.get('REMOTE_ADDR')
         key = f'rate_{ip}'
         
         count = cache.get(key, 0)
         
-        if count > 100:  # 100 requests per minute
+        if count > 100:
             return JsonResponse({
                 'error': 'Rate limit exceeded'
             }, status=429)
@@ -158,6 +152,7 @@ class RateLimitMiddleware(MiddlewareMixin):
 
 ```python
 # middleware.py
+from django.conf import settings
 from django.utils.deprecation import MiddlewareMixin
 
 
@@ -172,49 +167,38 @@ class RemoveWhitespaceMiddleware(MiddlewareMixin):
     def process_response(self, request, response):
         if response.status_code == 200:
             if 'text/html' in response.get('Content-Type', ''):
-                # Don't modify in debug mode
                 if not settings.DEBUG:
-                    # Whitespace removal would go here
                     pass
-        return response
-
-
-class GZipMiddleware(MiddlewareMixin):
-    def process_response(self, request, response):
-        # Check if client accepts gzip
-        if 'gzip' in request.META.get('HTTP_ACCEPT_ENCODING', ''):
-            # Would implement compression here
-            pass
         return response
 ```
 
 ### CORS Middleware
 
+**Use django-cors-headers (recommended for production):**
+
+```bash
+pip install django-cors-headers
+```
+
 ```python
-# middleware.py
-from django.http import JsonResponse
-from django.utils.deprecation import MiddlewareMixin
+# settings.py
+INSTALLED_APPS = [
+    'corsheaders',
+]
 
+MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
+]
 
-class CORSMiddleware(MiddlewareMixin):
-    def process_request(self, request):
-        if request.method == 'OPTIONS':
-            response = JsonResponse({})
-            response['Access-Control-Allow-Origin'] = '*'
-            response['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-            response['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
-            return response
-        
-        return None
-    
-    def process_response(self, request, response):
-        response['Access-Control-Allow-Origin'] = '*'
-        response['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
-        return response
+CORS_ALLOWED_ORIGINS = [
+    'https://example.com',
+    'https://www.example.com',
+]
 
-
-# Or use django-cors-headers
-# pip install django-cors-headers
+CORS_ALLOW_CREDENTIALS = True
+CORS_EXPOSE_HEADERS = ['Content-Length', 'Content-Range']
+CORS_PREFLIGHT_CACHE = 86400
 ```
 
 ## Using Middleware in Settings

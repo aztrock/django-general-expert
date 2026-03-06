@@ -43,21 +43,72 @@ Use modular structure when tests grow large. Each file tests one model/view/seri
 ### Running Tests
 
 ```bash
-# Run all tests
+# Run tests with default settings
+python manage.py test
+
+# Run tests with test settings (recommended)
+python manage.py test --settings=myproject.settings.test
+
+# Or set environment variable
+export DJANGO_SETTINGS_MODULE=myproject.settings.test
 python manage.py test
 
 # Run specific app
 python manage.py test myapp
 
-# Run specific test file
-python manage.py test myapp.tests.test_views
+# Run specific test file (models)
+python manage.py test myapp.tests.models.test_user
+
+# Run specific test file (views)
+python manage.py test myapp.tests.views.test_post_list
 
 # Run specific test class
-python manage.py test myapp.tests.test_views.PostViewTest
+python manage.py test myapp.tests.models.test_user.UserModelTest
 
 # Run specific test method
-python manage.py test myapp.tests.test_views.PostViewTest.test_get_queryset
+python manage.py test myapp.tests.models.test_user.UserModelTest.test_create_user
 ```
+
+### Test Settings
+
+Create a separate settings file for tests to speed up execution:
+
+```python
+# settings/test.py
+from .base import *
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': ':memory:',
+    }
+}
+
+# Faster password hasher for tests
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.MD5PasswordHasher',
+]
+
+# Disable logging during tests
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': True,
+    'handlers': {
+        'null': {
+            'class': 'logging.NullHandler',
+        },
+    },
+    'root': {
+        'handlers': ['null'],
+        'level': 'CRITICAL',
+    },
+}
+```
+
+**Benefits:**
+- SQLite in-memory is much faster than PostgreSQL/MySQL for tests
+- MD5 password hasher is faster than PBKDF2/Argon2
+- Disabled logging reduces test output noise
 
 ## TestCase Basics
 
@@ -656,3 +707,4 @@ class PostAPITest(APITestCase):
 6. **Use factories** to create test data
 7. **Mock external services** (requests.get/post)
 8. **DON'T mock the service itself** - mock its dependencies
+9. **Use test settings** with SQLite in-memory for faster execution

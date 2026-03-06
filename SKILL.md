@@ -85,7 +85,6 @@ Identify the task category, then **use the Read tool** to load the corresponding
 | Constants and choices | Read `references/constants.md` |
 | Celery tasks | Read `references/celery-patterns.md` |
 | Django signals | Read `references/signals-guide.md` |
-| Complete examples | Read `references/examples.md` |
 | Django Admin | Read `references/admin-guide.md` |
 | Forms & ModelForms | Read `references/forms-modelforms.md` |
 | Authentication | Read `references/authentication.md` |
@@ -95,7 +94,6 @@ Identify the task category, then **use the Read tool** to load the corresponding
 | Static & media files | Read `references/static-media-files.md` |
 | Project structure | Read `references/project-structure.md` |
 | Third-party packages | Read `references/third-party-packages.md` |
-| Docker & deployment | Read `references/docker-deployment.md` |
 
 For multi-category requests, read all relevant references.
 
@@ -1052,12 +1050,6 @@ DEFAULT_TIMEOUT = 30
   - Debugging difficulties
   - Examples
 
-- **`examples.md`** (1034 lines)
-  - Blog with DRF
-  - Order processing
-  - User registration
-  - Testing suite
-
 - **`admin-guide.md`** (290 lines)
   - Django Admin customization
   - List display options
@@ -1105,58 +1097,6 @@ DEFAULT_TIMEOUT = 30
 - **`third-party-packages.md`** (197 lines)
   - Recommended packages
   - Package selection criteria
-
-- **`docker-deployment.md`** (280 lines)
-  - Docker configuration
-  - Nginx setup
-  - Production checklist
-  - APITestCase for DRF
-  - FactoryBoy for test data
-  - Mocking external services
-  - Test organization
-
-- **`security-checklist.md`** (~14k words)
-  - OWASP Top 10
-  - Authentication
-  - Authorization
-  - Input validation
-  - HTTPS/SSL
-
-- **`performance-optimization.md`** (~12k words)
-  - Query optimization
-  - Caching (Redis)
-  - Database indexing
-  - Profiling
-
-- **`advanced-patterns.md`** (~13k words)
-  - Service layer
-  - Repository pattern
-  - Domain events
-  - Dataclasses and typing
-
-- **`constants.md`** (~5k words)
-  - Why separate constants
-  - TextChoices organization
-  - Avoiding circular imports
-  - Examples
-
-- **`celery-patterns.md`** (~8k words)
-  - Task definition
-  - Validation before creation
-  - State verification
-  - Error handling
-
-- **`signals-guide.md`** (~6k words)
-  - When to use signals
-  - When to avoid signals
-  - Debugging difficulties
-  - Examples
-
-- **`examples.md`** (~24k words)
-  - Blog with DRF
-  - Order processing
-  - User registration
-  - Testing suite
 
 ## Quick Reference
 

@@ -23,21 +23,42 @@ myproject/
 │   │   ├── __init__.py
 │   │   ├── models.py
 │   │   ├── views.py
-│   │   ├── serializers.py
-│   │   ├── urls.py
-│   │   ├── services.py
-│   │   ├── selectors.py
-│   │   ├── permissions.py
-│   │   ├── tasks.py          # Celery tasks
-│   │   ├── signals.py
-│   │   ├── admin.py
+│   │   ├── forms.py
+│   │   ├── urls.py           # Django django.urls for this app
+│   │   ├── services/
+│   │   │   ├── __init__.py
+│   │   │   └── notification.py
+│   │   ├── tasks/
+│   │   │   ├── __init__.py
+│   │   │   └── tasks.py
+│   │   ├── signals/
+│   │   │   ├── __init__.py
+│   │   │   └── signals.py
+│   │   ├── admin/
+│   │   │   ├── __init__.py
+│   │   │   └── admin.py
 │   │   ├── tests/
 │   │   │   ├── __init__.py
-│   │   │   └── test_models.py
-│   │   ├── api/
+│   │   │   ├── factories/
+│   │   │   │   ├── __init__.py
+│   │   │   │   └── factory_user.py
+│   │   │   ├── models/
+│   │   │   │   ├── __init__.py
+│   │   │   │   └── test_user.py
+│   │   │   └── services/
+│   │   │       ├── __init__.py
+│   │   │       └── test_notification_service.py
+│   │   ├── api/              # Django REST Framework API
 │   │   │   ├── v1/
-│   │   │   │   ├── urls.py
-│   │   │   │   └── views.py
+│   │   │   │   ├── users/
+│   │   │   │   │   ├── serializers.py
+│   │   │   │   │   ├── filters.py
+│   │   │   │   │   └── viewsets.py
+│   │   │   │   └── groups/
+│   │   │   │       ├── serializers.py
+│   │   │   │       ├── filters.py
+│   │   │   │       └── viewsets.py
+│   │   │   ├── urls.py       # DRF django.urls for API v1
 │   │   │   └── __init__.py
 │   │   ├── migrations/
 │   │   │   └── __init__.py
@@ -49,10 +70,10 @@ myproject/
 │   ├── __init__.py
 │   ├── models.py             # Base models
 │   ├── views.py              # Base views
-│   ├── serializers.py        # Base serializers
+│   ├── serializers.py         # Base serializers
 │   ├── utils.py
 │   └── exceptions.py
-├── services/                 # Cross-app services
+├── services/                 # Cross-app services if needed
 │   ├── __init__.py
 │   ├── notification.py
 │   └── payment.py
@@ -71,7 +92,6 @@ myproject/
 ├── .env                      # Environment variables
 ├── .gitignore
 ├── manage.py
-├── pytest.ini
 ├── docker-compose.yml
 ├── Dockerfile
 └── README.md
@@ -199,7 +219,6 @@ django-filter>=23.0
 # requirements/production.txt
 -r base.txt
 gunicorn>=20.0
-whitenoise>=6.0
 redis>=4.0
 celery>=5.0
 django-storages>=1.13
@@ -208,9 +227,6 @@ boto3>=1.26
 
 # requirements/development.txt
 -r base.txt
-pytest>=7.0
-pytest-django>=4.5
-pytest-cov>=4.0
 faker>=18.0
 ```
 
@@ -238,10 +254,10 @@ class OrdersConfig(AppConfig):
 # apps/orders/api/v1/urls.py
 from django.urls import path
 from rest_framework.routers import DefaultRouter
-from . import views
+from .orders import viewsets
 
 router = DefaultRouter()
-router.register('orders', views.OrderViewSet, basename='order')
+router.register('orders', viewsets.OrderViewSet, basename='order')
 
 urlpatterns = router.urls
 ```
@@ -258,3 +274,5 @@ urlpatterns = router.urls
 8. **Use .env for secrets**
 9. **Follow Django conventions** for file naming
 10. **Keep apps focused** (single responsibility)
+11. **Use managers/querysets** instead of selectors
+12. **Modular tests** with factories/, models/, views/, serializers/, services/

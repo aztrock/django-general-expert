@@ -801,7 +801,7 @@ myproject/
 │   │   ├── services.py
 │   │   ├── views/
 │   │   ├── forms/
-│   │   ├── selectors.py      # Complex query methods
+│   │   ├── queryset.py      # Complex query methods
 │   │   └── tests/
 │   └── products/
 │       └── ...
@@ -857,7 +857,7 @@ Each module has a specific purpose:
 | `views/` or `viewsets.py` | HTTP handling, connect to services/forms |
 | `forms/` | Form validation for template views |
 | `serializers.py` | Serialization/deserialization for DRF |
-| `selectors.py` | Complex query composition |
+| `queryset.py` | Complex query composition |
 | `integrations/` | External service integrations (SMS, email, payments) |
 
 ### External Integrations

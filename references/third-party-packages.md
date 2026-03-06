@@ -17,7 +17,7 @@ Guide to selecting and integrating third-party packages for Django.
 
 | Package | Purpose | Install |
 |---------|---------|---------|
-| psycopg2-binary | PostgreSQL | `pip install psycopg2-binary` |
+| psycopg2-binary | PostgreSQL (dev) | `pip install psycopg2-binary` |
 | django-redis | Redis cache | `pip install django-redis` |
 | django-candyman | Connection pooling | `pip install django-candyman` |
 
@@ -41,17 +41,14 @@ Guide to selecting and integrating third-party packages for Django.
 | Package | Purpose | Install |
 |---------|---------|---------|
 | django-cors-headers | CORS | `pip install django-cors-headers` |
-| whitenoise | Static files | `pip install whitenoise` |
 | django-allauth | Social auth | `pip install django-allauth` |
+| django-axes | Brute force protection | `pip install django-axes` |
 
 ### Testing
 
 | Package | Purpose | Install |
 |---------|---------|---------|
-| pytest | Test runner | `pip install pytest` |
-| pytest-django | Django support | `pip install pytest-django` |
 | factory-boy | Test fixtures | `pip install factory-boy` |
-| pytest-cov | Coverage | `pip install pytest-cov` |
 | faker | Fake data | `pip install faker` |
 
 ### Development
@@ -61,6 +58,7 @@ Guide to selecting and integrating third-party packages for Django.
 | django-debug-toolbar | Debug | `pip install django-debug-toolbar` |
 | django-extensions | Extensions | `pip install django-extensions` |
 | ipython | Shell | `pip install ipython` |
+| whitenoise | Static files | `pip install whitenoise` |
 
 ### Frontend Integration
 
@@ -68,7 +66,6 @@ Guide to selecting and integrating third-party packages for Django.
 |---------|---------|---------|
 | django-crispy-forms | Forms | `pip install django-crispy-forms` |
 | django-crispy-bootstrap5 | Bootstrap 5 | `pip install crispy-bootstrap5` |
-| django-widget-tweaks | Widgets | `pip install django-widget-tweaks` |
 
 ## Package Selection Criteria
 
@@ -117,6 +114,7 @@ pip install -r requirements/base.txt
 # requirements/production.txt
 Django==4.2.9
 djangorestframework==3.14.0
+psycopg2==2.9.9
 ```
 
 ## Package Configuration
@@ -192,6 +190,5 @@ ACCOUNT_LOGOUT_REDIRECT_URL = '/'
 5. **Keep updated** but test first
 6. **Minimal dependencies** - avoid bloat
 7. **Use django-extensions** for development
-8. **Use pytest** for testing
-9. **Use django-filter** for complex APIs
-10. **Use whitenoise** for static files in production
+8. **Use django-filter** for complex APIs
+9. **Use whitenoise** for static files in production

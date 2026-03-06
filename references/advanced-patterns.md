@@ -337,37 +337,6 @@ def order_detail(request, order_id):
     return render(request, 'orders/detail.html', {'order': order})
 ```
 
-### Selectors (Alternative to QuerySets in modules)
-
-```python
-# selectors.py
-class OrderSelector:
-    """Alternative: selectors for complex queries."""
-    
-    @staticmethod
-    def get_customer_orders(customer_id: int):
-        return Order.objects.filter(
-            customer_id=customer_id
-        ).select_related(
-            'shipping_address', 'billing_address'
-        ).prefetch_related('items__product')
-    
-    @staticmethod
-    def get_order_detail(order_id: int):
-        return Order.objects.select_related(
-            'customer__profile',
-            'payment'
-        ).prefetch_related(
-            'items__product__category'
-        ).get(pk=order_id)
-    
-    @staticmethod
-    def get_pending_orders():
-        return Order.objects.filter(
-            status__in=[OrderStatus.PENDING, OrderStatus.PROCESSING]
-        ).order_by('created_at')
-```
-
 ## Fat Model Problem
 
 Avoid putting business logic in models. Use services instead.
